@@ -5,13 +5,10 @@ format: html
 editor: visual
 ---
 
-## Quarto
-
-## Running Code
+## Configuration du projet
 
 ```{r}
-usethis::use_git()
-here::i_am("Semiconductor-database.Rproj")
+here::i_am("Semiconductor-project.Rproj")
 library(here)
 library(readxl)
 library(dplyr)
@@ -21,10 +18,12 @@ library(rnaturalearth)
 library(sf)
 library(ggrepel)
 library(plm)
-library(modelsummary)   
+library(modelsummary)
 ```
 
-You can add options to executable code like this
+# Base des données
+
+## Importation des données
 
 ```{r}
 migration_data <- read_excel("database_1.xlsx", sheet = "version for R")
@@ -33,7 +32,7 @@ Node_development <- read_excel("database_1.xlsx", sheet = "Process Node (Source)
 Node_development <- Node_development[, 1:4]
 ```
 
-The `echo: false` option disables the printing of code (only output is displayed).
+## Prétraitement des données
 
 ```{r}
 # Ajouter une nouvelle colonne : nombre d'ingénieurs
@@ -42,8 +41,10 @@ migration_data$num_engineer[78] <- 100
 migration_data$num_engineer[79] <- 3000   
 migration_data$num_engineer[80] <- 1300   
 migration_data$num_engineer[81] <- 49     
-migration_data$num_engineer[82] <- 400  
+migration_data$num_engineer[82] <- 400
 ```
+
+# Analyse descriptive
 
 ```{r}
 # Compter le nombre total de mobilisations entre différents pays
@@ -70,9 +71,7 @@ for(i in 1:nrow(migration_data)) {
 mobilization_table <- table(mobilizations)
 migration_count_between_country <- as.data.frame(mobilization_table)
 colnames(migration_count_between_country) <- c("mobilization", "count")
-```
 
-```{r}
 # Diviser la colonne 'mobilization' en deux colonnes ('from' et 'to')
 # puis normaliser les noms des pays pour faciliter l'analyse future
 migration_count_between_country <- migration_count_between_country |>
@@ -91,6 +90,52 @@ migration_count_between_country <- migration_count_between_country |>
     )
   )
 
+```
+
+## Graphique 1 : Flux de talents par pays — entrants vs sortants (barres groupées)
+```{r}
+library(ggplot2)
+
+# 1) Flux sortants par pays d'origine
+total_outflow_country <- migration_count_between_country |>
+  group_by(from) |>
+  summarise(total_count = sum(count), .groups = "drop") |>
+  rename(country_of_origin = from)
+
+
+ggplot(total_outflow_country, aes(x = reorder(country_of_origin, -total_count), 
+                                  y = total_count)) +
+  geom_bar(stat = "identity", fill = "#006D2C") +
+  geom_text(aes(label = scales::comma(total_count)), 
+            vjust = -0.3, size = 3) +
+  labs(title = "Total Outflow by Country",
+       x = "Country of Origin",
+       y = "Total Outflow Count") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+# 2) Flux entrants par pays de destination
+total_inflow_country <- migration_count_between_country |>
+  group_by(to) |>
+  summarise(total_count = sum(count), .groups = "drop") |>
+  rename(country_of_destination = to)
+
+ggplot(total_inflow_country, aes(x = reorder(country_of_destination, -total_count), 
+                                  y = total_count)) +
+  geom_bar(stat = "identity", fill = "#006D2C") +
+  geom_text(aes(label = scales::comma(total_count)), 
+            vjust = -0.3, size = 3) +
+  labs(title = "Total Inflow by Country",
+       x = "country_of_destination",
+       y = "Total Inflow Count") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+```
+## Graphique 2 : Carte des flux migratoires — origines → destinations
+```{r}
 # Charger les données géographiques des pays
 world <- ne_countries(scale = "medium", returnclass = "sf") |>
   st_transform(crs = "+proj=longlat +datum=WGS84")
@@ -164,9 +209,9 @@ ggplot() +
     legend.position = "bottom",
     panel.grid = element_blank(),#
     axis.text = element_blank(),
-    plot.title = element_text(size = 16, face = "bold"),
-    plot.subtitle = element_text(size = 11),
-    legend.text = element_text(size = 6)
+    plot.title = element_text(size = 12, face = "bold"),
+    legend.text = element_text(size = 5),
+    legend.title = element_text(size = 8)
   ) +
   guides(color = guide_colorbar(
     barwidth = 16, 
@@ -180,9 +225,11 @@ ggplot() +
     expand = FALSE)
 ```
 
+## Graphique 3 : Flux de talents par année (barres groupées)
+
 ```{r}
 # Création d'un tableau vide pour stocker les flux de talents avec l'année de sortie
-move_with_exit_year <- data.frame(
+migration_count_between_country_by_year <- data.frame(
   from = character(),
   to = character(),
   exit_year = character(),
@@ -213,7 +260,7 @@ for(i in 1:nrow(migration_data)) {
         stringsAsFactors = FALSE
       )
       
-      move_with_exit_year <- rbind(move_with_exit_year, new_move)
+      migration_count_between_country_by_year <- rbind(migration_count_between_country_by_year, new_move)
       
     }
   }
@@ -221,21 +268,33 @@ for(i in 1:nrow(migration_data)) {
 
 # Calcul de la fréquence annuelle des mouvements transfrontaliers 
 # afin d'identifier les périodes de mobilisation les plus intenses
-yearly_counts <- move_with_exit_year |>
+yearly_counts <- migration_count_between_country_by_year |>
   group_by(exit_year) |>
   summarise(total_count = sum(count), .groups = "drop")
 
 yearly_counts_filtered <- yearly_counts |>
-  filter(exit_year != "1991-2018")
+  filter(exit_year != "1991-2018") |>
+  mutate(exit_year = as.integer(exit_year)) |>
+  add_row(exit_year = c(1996L, 1997L, 1998L),
+          total_count = c(0, 0, 0),
+          .after = 1)
+
 
 ggplot(yearly_counts_filtered, aes(x = exit_year, y = total_count)) +
-  geom_col(fill = "skyblue", color = "black") +
-  labs(title = "Histogram of Talent Movements per Year",
+  geom_col(fill = "#006D2C") +
+  geom_text(aes(label = scales::comma(total_count)), 
+            vjust = -0.3, size = 3) +
+  scale_x_continuous(
+    breaks = function(x) seq(floor(x[1]/5)*5, ceiling(x[2]/5)*5, by = 5)
+  ) +
+  labs(title = "Evolution of Talent Flows Over Time",
        x = "Exit Year", y = "Total Count") +
   theme_minimal()
+```
 
-
-flow_matrix <- move_with_exit_year |>
+## Graphique 4 : Heatmap des flux de talents : pays d’origine vs pays de destination
+```{r}
+flow_matrix <- migration_count_between_country_by_year |>
   group_by(from, to) |>
   summarise(total_count = sum(count, na.rm = TRUE), .groups = "drop")|>
   mutate(total_count_log = log10(total_count + 1))
@@ -253,6 +312,8 @@ ggplot(flow_matrix, aes(x = to, y = from, fill = total_count_log)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
+## Graphique 5 : Carte des flux migratoires en Asie depuis 2015 — origines → destinations
+
 ```{r}
 # Extraire la carte des pays asiatiques
 asia <- ne_countries(scale = "medium", returnclass = "sf") |>
@@ -268,7 +329,7 @@ asia_country_coords <- asia |>
   filter(country %in% c(migration_count_between_country$from, migration_count_between_country$to))
 
 # Filtrer les mouvements depuis 2015
-move_from_2015 <- move_with_exit_year |>
+move_from_2015 <- migration_count_between_country_by_year |>
   filter(exit_year >= 2015) |>
   select(from, to, count)
 
@@ -321,9 +382,10 @@ ggplot() +
     legend.position = "bottom",
     panel.grid = element_blank(),
     axis.text = element_blank(),
-    plot.title = element_text(size = 16, face = "bold",hjust = 0.5),
+    plot.title = element_text(size = 10, face = "bold",hjust = 0.42),
     plot.subtitle = element_text(size = 11),
-    legend.text = element_text(size = 6),
+    legend.text = element_text(size = 5),
+    legend.title = element_text(size = 8),
     plot.margin = margin(t = 10, r = 20, b = 10, l = 20)
   ) +
   guides(color = guide_colorbar(
@@ -337,7 +399,7 @@ ggplot() +
     ylim = c(-10, 60),
     expand = FALSE)
 ```
-
+# Analyse des régressions
 ```{r}
 # Régression entre mouvements des talents et progrès des technologies de fabrication des semi-conducteurs
 
@@ -432,6 +494,7 @@ panel_data <- panel_data |>
   ungroup()
 ```
 
+## Régressions de panel : flux de talents → taille de nœud (nm), retards 1–5 ans
 ```{r}
 #  Régressions -- inflow_count
 
@@ -674,6 +737,14 @@ modelsummary(
   title = "Fixed Effects Panel Regressions: Semiconductor Node vs Talent Netflows"
 )
 ```
+
+## Régressions de panel : flux de talents → taux de rendement, retards 1–5 ans
+
+
+
+
+
+
 
 ```{r}
 #  Régressions
