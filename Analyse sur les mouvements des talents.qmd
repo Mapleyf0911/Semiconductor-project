@@ -19,6 +19,7 @@ library(sf)
 library(ggrepel)
 library(plm)
 library(modelsummary)
+library(kableExtra)
 ```
 
 # Base des données
@@ -400,9 +401,9 @@ ggplot() +
     expand = FALSE)
 ```
 # Analyse des régressions
-```{r}
-# Régression entre mouvements des talents et progrès des technologies de fabrication des semi-conducteurs
 
+## Régression entre mouvements des talents et progrès de la taille de nœud
+```{r}
 # Création du jeu de données migration_flow_data
 
 # Transformation des données de matrice large en tableau longitudinal
@@ -494,7 +495,7 @@ panel_data <- panel_data |>
   ungroup()
 ```
 
-## Régressions de panel : flux de talents → taille de nœud (nm), retards 1–5 ans
+### Régressions de panel : flux de talents → taille de nœud (nm), retards 1–5 ans
 ```{r}
 #  Régressions -- inflow_count
 
@@ -504,7 +505,6 @@ model_1 <- plm(
   index = c("country", "year"),
   model = "within"
 )
-summary(model_1)
 
 #  Régressions -- outflow_count
 
@@ -514,7 +514,6 @@ model_2 <- plm(
   index = c("country", "year"),
   model = "within"
 )
-summary(model_2)
 
 #  Régressions -- net_flow
 
@@ -524,9 +523,8 @@ model_3 <- plm(
   index = c("country", "year"),
   model = "within"
 )
-summary(model_3)
 
-#  Régressions -- lag1 
+#  Régressions -- inflow_count (lag1)
 
 model_1lag1 <- plm(
   nanometer ~ lag(inflow_count, 1),   
@@ -535,16 +533,12 @@ model_1lag1 <- plm(
   model = "within"
 )
 
-summary(model_1lag1)
-
 model_2lag1 <- plm(
   nanometer ~ lag(outflow_count, 1),   
   data = panel_data,
   index = c("country", "year"),
   model = "within"
 )
-
-summary(model_2lag1)
 
 
 model_3lag1 <- plm(
@@ -553,8 +547,6 @@ model_3lag1 <- plm(
   index = c("country", "year"),
   model = "within"
 )
-
-summary(model_3lag1)
 
 
 #  Régressions -- lag2
@@ -566,7 +558,6 @@ model_1lag2 <- plm(
   model = "within"
 )
 
-summary(model_1lag2)
 
 model_2lag2 <- plm(
   nanometer ~ lag(outflow_count, 2),   
@@ -575,8 +566,6 @@ model_2lag2 <- plm(
   model = "within"
 )
 
-summary(model_2lag2)
-
 
 model_3lag2 <- plm(
   nanometer ~ lag(net_flow, 2),   
@@ -584,8 +573,6 @@ model_3lag2 <- plm(
   index = c("country", "year"),
   model = "within"
 )
-
-summary(model_3lag2)
 
 
 #  Régressions -- lag3
@@ -597,16 +584,12 @@ model_1lag3 <- plm(
   model = "within"
 )
 
-summary(model_1lag3)
-
 model_2lag3 <- plm(
   nanometer ~ lag(outflow_count, 3),   
   data = panel_data,
   index = c("country", "year"),
   model = "within"
 )
-
-summary(model_2lag3)
 
 
 model_3lag3 <- plm(
@@ -615,8 +598,6 @@ model_3lag3 <- plm(
   index = c("country", "year"),
   model = "within"
 )
-
-summary(model_3lag3)
 
 #  Régressions -- lag4
 
@@ -627,7 +608,6 @@ model_1lag4 <- plm(
   model = "within"
 )
 
-summary(model_1lag4)
 
 model_2lag4 <- plm(
   nanometer ~ lag(outflow_count, 4),   
@@ -635,8 +615,6 @@ model_2lag4 <- plm(
   index = c("country", "year"),
   model = "within"
 )
-
-summary(model_2lag4)
 
 
 model_3lag4 <- plm(
@@ -646,7 +624,6 @@ model_3lag4 <- plm(
   model = "within"
 )
 
-summary(model_3lag4)
 
 
 #  Régressions -- lag5
@@ -658,7 +635,6 @@ model_1lag5 <- plm(
   model = "within"
 )
 
-summary(model_1lag5)
 
 model_2lag5 <- plm(
   nanometer ~ lag(outflow_count, 5),   
@@ -667,7 +643,6 @@ model_2lag5 <- plm(
   model = "within"
 )
 
-summary(model_2lag5)
 
 
 model_3lag5 <- plm(
@@ -677,7 +652,6 @@ model_3lag5 <- plm(
   model = "within"
 )
 
-summary(model_3lag5)
 
 # Tableau récapitulatif des résultats de régressions
 
@@ -738,8 +712,223 @@ modelsummary(
 )
 ```
 
-## Régressions de panel : flux de talents → taux de rendement, retards 1–5 ans
+### Régressions de panel : flux de talents → taux de rendement, retards 1–5 ans
 
+```{r}
+#  Régressions -- inflow_count
+
+model2_1 <- plm(
+  formula = yield_rate  ~ inflow_count,  
+  data = panel_data,
+  index = c("country", "year"),
+  model = "within"
+)
+
+#  Régressions -- outflow_count
+
+model2_2 <- plm(
+  formula = yield_rate ~ outflow_count,  
+  data = panel_data,
+  index = c("country", "year"),
+  model = "within"
+)
+
+#  Régressions -- net_flow
+
+model2_3 <- plm(
+  formula = yield_rate ~ net_flow,  
+  data = panel_data,
+  index = c("country", "year"),
+  model = "within"
+)
+
+#  Régressions -- inflow_count (lag1)
+
+model2_1lag1 <- plm(
+  yield_rate ~ lag(inflow_count, 1),   
+  data = panel_data,
+  index = c("country", "year"),
+  model = "within"
+)
+
+model2_2lag1 <- plm(
+  yield_rate ~ lag(outflow_count, 1),   
+  data = panel_data,
+  index = c("country", "year"),
+  model = "within"
+)
+
+
+model2_3lag1 <- plm(
+  yield_rate ~ lag(net_flow, 1),   
+  data = panel_data,
+  index = c("country", "year"),
+  model = "within"
+)
+
+
+#  Régressions -- lag2
+
+model2_1lag2 <- plm(
+  yield_rate ~ lag(inflow_count, 2),   
+  data = panel_data,
+  index = c("country", "year"),
+  model = "within"
+)
+
+
+model2_2lag2 <- plm(
+  yield_rate ~ lag(outflow_count, 2),   
+  data = panel_data,
+  index = c("country", "year"),
+  model = "within"
+)
+
+
+model2_3lag2 <- plm(
+  yield_rate ~ lag(net_flow, 2),   
+  data = panel_data,
+  index = c("country", "year"),
+  model = "within"
+)
+
+
+#  Régressions -- lag3
+
+model2_1lag3 <- plm(
+  yield_rate ~ lag(inflow_count, 3),   
+  data = panel_data,
+  index = c("country", "year"),
+  model = "within"
+)
+
+model2_2lag3 <- plm(
+  yield_rate ~ lag(outflow_count, 3),   
+  data = panel_data,
+  index = c("country", "year"),
+  model = "within"
+)
+
+
+model2_3lag3 <- plm(
+  yield_rate ~ lag(net_flow, 3),   
+  data = panel_data,
+  index = c("country", "year"),
+  model = "within"
+)
+
+#  Régressions -- lag4
+
+model2_1lag4 <- plm(
+  yield_rate ~ lag(inflow_count, 4),   
+  data = panel_data,
+  index = c("country", "year"),
+  model = "within"
+)
+
+
+model2_2lag4 <- plm(
+  yield_rate ~ lag(outflow_count, 4),   
+  data = panel_data,
+  index = c("country", "year"),
+  model = "within"
+)
+
+
+model2_3lag4 <- plm(
+  yield_rate ~ lag(net_flow, 4),   
+  data = panel_data,
+  index = c("country", "year"),
+  model = "within"
+)
+
+
+
+#  Régressions -- lag5
+
+model2_1lag5 <- plm(
+  yield_rate ~ lag(inflow_count, 5),   
+  data = panel_data,
+  index = c("country", "year"),
+  model = "within"
+)
+
+
+model2_2lag5 <- plm(
+  yield_rate ~ lag(outflow_count, 5),   
+  data = panel_data,
+  index = c("country", "year"),
+  model = "within"
+)
+
+
+
+model2_3lag5 <- plm(
+  yield_rate ~ lag(net_flow, 5),   
+  data = panel_data,
+  index = c("country", "year"),
+  model = "within"
+)
+
+
+# Tableau récapitulatif des résultats de régressions
+
+models2_inflow <- list(
+  "Inflow (t)"     = model2_1,
+  "Inflow (t-1)"   = model2_1lag1,
+  "Inflow (t-2)"   = model2_1lag2,
+  "Inflow (t-3)"   = model2_1lag3,
+  "Inflow (t-4)"   = model2_1lag4,
+  "Inflow (t-5)"   = model2_1lag5
+)
+
+
+models2_outflow <- list(
+  "Outflow (t)"    = model2_2,
+  "Outflow (t-1)"  = model2_2lag1,
+  "Outflow (t-2)"  = model2_2lag2,
+  "Outflow (t-3)"  = model2_2lag3,
+  "Outflow (t-4)"  = model2_2lag4,
+  "Outflow (t-5)"  = model2_2lag5
+)
+
+models2_netflow <- list(
+  "Net Flow (t)"   = model2_3,
+  "Net Flow (t-1)" = model2_3lag1,
+  "Net Flow (t-2)" = model2_3lag2,
+  "Net Flow (t-3)" = model2_3lag3,
+  "Net Flow (t-4)" = model2_3lag4,
+  "Net Flow (t-5)" = model2_3lag5
+)
+
+
+modelsummary(
+  models2_inflow,
+  stars = TRUE,                
+  fmt = 3,                      
+  gof_map = c("nobs", "r.squared"), 
+  output = "markdown",          
+  title = "Fixed Effects Panel Regressions: Yield Rate vs Talent Inflows"
+)
+
+modelsummary(
+  models2_outflow,
+  stars = TRUE,                
+  fmt = 3,                      
+  gof_map = c("nobs", "r.squared"), 
+  output = "markdown",          
+  title = "Fixed Effects Panel Regressions: Yield Rate vs Talent Outflows"
+)
+
+modelsummary(
+  models2_netflow,
+  stars = TRUE,                
+  fmt = 3,                      
+  gof_map = c("nobs", "r.squared"), 
+  output = "markdown",          
+  title = "Fixed Effects Panel Regressions: Yield Rate vs Talent Netflows"
+)
+```
 
 
 
